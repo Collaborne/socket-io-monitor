@@ -104,7 +104,7 @@
 
 			observers: [
 				'_reconnect(endpoint, token)',
-				'_reconfigureEvents(_socket, expectedEvents)',
+				'_reconfigureEvents(_socket, _monitoredEvents, expectedEvents)',
 			],
 
 			_addEvent: function(type, endpoint, data) {
@@ -162,16 +162,16 @@
 				return this._socket = socket;
 			},
 
-			_reconfigureEvents: function(socket, expectedEvents) {
+			_reconfigureEvents: function(socket, monitoredEvents, expectedEvents) {
 				if (!socket || !expectedEvents) {
 					return;
 				}
 
-				const obsoleteEvents = this._monitoredEvents.filter(event => expectedEvents.indexOf(event) === -1);
+				const obsoleteEvents = monitoredEvents.filter(event => expectedEvents.indexOf(event) === -1);
 				obsoleteEvents.forEach(event => socket.off(event));
-				const newEvents = expectedEvents.filter(event => this._monitoredEvents.indexOf(event) === -1);
+				const newEvents = expectedEvents.filter(event => monitoredEvents.indexOf(event) === -1);
 				newEvents.forEach(event => socket.on(event, data => this._addEvent(event, this.endpoint, data)));
-				this._monitoredEvents = expectedEvents;
+				monitoredEvents.splice.apply(monitoredEvents, [0, monitoredEvents.length, ...expectedEvents]);
 			},
 
 			_getEventClass: function(events, index) {
