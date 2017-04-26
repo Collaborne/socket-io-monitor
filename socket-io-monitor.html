@@ -1,0 +1,184 @@
+<!doctype html>
+
+<link rel="import" href="bower_components/polymer/polymer.html">
+<link rel="import" href="bower_components/iron-flex-layout/iron-flex-layout.html">
+
+<dom-module id="socket-io-monitor">
+	<script src="/socket.io/socket.io.js"></script>
+
+	<template>
+		<style>
+			.events {
+				@apply --layout-vertical;
+			}
+
+			.event {
+				@apply --layout-vertical;
+			}
+
+			.event.even {
+				background: #CCC
+			}
+
+			.event.odd {
+				background: #FFF
+			}
+			
+			.event .metadata {
+				@apply --layout-horizontal;
+			}
+
+			.event .timestamp, .event .type {
+				margin-right: 1em;
+			}
+
+			.event .type {
+				font-weight: bold;
+				@apply --layout-flex;
+			}
+
+			.event .data {
+				@apply --layout-flex;
+			}
+		</style>
+
+		<div class="events">
+			<template is="dom-repeat" items="[[_events]]" as="event">
+				<div class$="[[_getEventClass(_events, index)]]">
+					<div class="metadata">
+						<div class="timestamp">[[event.timestampAsString]]</div>
+						<div class="type">[[event.type]]</div>
+					</div>
+					<pre class="data">[[event.dataAsString]]</pre>
+				</div>
+			</template>
+		</div>
+	</template>
+
+	<script>
+		Polymer({
+			is: 'socket-io-monitor',
+
+			properties: {
+				/**
+				 * Endpoint to connect to using socket.io.
+				 */
+				endpoint: {
+					type: String,
+					value: '/'
+				},
+				/**
+				 * JWT token to use when connecting, can be empty.
+				 */
+				token: {
+					type: String,
+					value: ''
+				},
+				/**
+				 * Additional events to monitor.
+				 *
+				 * It is currently not possible to monitor "all" events, so instead this array must be set to include all needed events.
+				 */
+				expectedEvents: {
+					type: Array,
+					value: function() {
+						return [];
+					}
+				},
+				_socket: {
+					type: Object
+				},
+				_events: {
+					type: Array,
+					value: function() {
+						return [];
+					}
+				},
+				_monitoredEvents: {
+					type: Array,
+					value: function() {
+						return [];
+					}
+				},
+			},
+
+			observers: [
+				'_reconnect(endpoint, token)',
+				'_reconfigureEvents(_socket, expectedEvents)',
+			],
+
+			_addEvent: function(type, endpoint, data) {
+				const newEvent = {
+					timestamp: Date.now(),
+					type,
+					endpoint,
+					data,
+
+					get timestampAsString() {
+						return new Date(this.timestamp).toLocaleString();
+					},
+					get dataAsString() {
+						return JSON.stringify(this.data, null, 2);
+					}
+				};
+				return this.unshift('_events', newEvent);
+			},
+
+			_disconnect: function() {
+				if (this._socket) {
+					this._socket.close();
+					this._socket = null;
+				}
+			},
+
+			_reconnect: function(endpoint, token) {
+				this._disconnect();
+				this.set('_events', []);
+
+				const options = {};
+				if (token) {
+					options.query = `token=${token}`;
+				}
+				
+				const socket = io(endpoint, options);
+
+				// Listen for all standard events
+				socket.on('error', (error) => {
+					if (error.type === 'UnauthorizedError') {
+						this._disconnect();		
+					}
+					return this._addEvent('error', endpoint, error)
+				});
+				socket.on('connect', () => this._addEvent('connected', endpoint, { id: socket.id }));
+				socket.on('connect_error', error => this._addEvent('connect-error', endpoint, error));
+				socket.on('connect_timeout', error => this._addEvent('connect-timeout', endpoint, error));
+				socket.on('disconnect', () => this._addEvent('disconnect', endpoint));
+				socket.on('reconnect', attempt => this._addEvent('reconnect', endpoint, { attempt }));
+				socket.on('reconnect_attempt', attempt => this._addEvent('reconnect-attempt', endpoint, { attempt }));
+				socket.on('reconnect_error', error => this._addEvent('reconnect-error', endpoint, error));
+				socket.on('reconnect_failed', attempt => this._addEvent('reconnect-failed', endpoint, { attempt }));
+				socket.on('reconnecting', attempt => this._addEvent('reconnecting', endpoint, { attempt }));
+
+				return this._socket = socket;
+			},
+
+			_reconfigureEvents: function(socket, expectedEvents) {
+				if (!socket || !expectedEvents) {
+					return;
+				}
+
+				const obsoleteEvents = this._monitoredEvents.filter(event => expectedEvents.indexOf(event) === -1);
+				obsoleteEvents.forEach(event => socket.off(event));
+				const newEvents = expectedEvents.filter(event => this._monitoredEvents.indexOf(event) === -1);
+				newEvents.forEach(event => socket.on(event, data => this._addEvent(event, this.endpoint, data)));
+				this._monitoredEvents = expectedEvents;
+			},
+
+			_getEventClass: function(events, index) {
+				// If we have an even number of events, then we assign 'even', 'odd', ...
+				// If we instead have an odd number of events, then we want 'odd', 'even', ...
+				return `event ${index % 2 === events.length % 2 ? 'even' : 'odd'}`;
+			},
+		});
+	</script>
+</dom-module>
