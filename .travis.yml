@@ -20,7 +20,4 @@ before_script:
 script:
 - echo 'No tests yet'
 # - xvfb-run $(npm bin)/wct
-after_success: '[ ${TRAVIS_PULL_REQUEST} = "false" ] && [ ${TRAVIS_BRANCH} = "master" ] && $(npm bin)/bower install -s https://${GH_TOKEN}@github.com/Collaborne/collaborne-build-tools.git && bower_components/collaborne-build-tools/gpages_build.sh Collaborne info@collaborne.com'
-env:
-  secure: "kky8dEbwAN2aUfKO1mBJMRRoKbLkZBB6mIAeGduRyCURhSCqgwlzHMmNkk3y8oz6SBWul115VFXV/LaSUmweQiSkRnomIAdTOJoHloUJjT+FYOQUNbRhdMEzmuLjjQxmTRjuw23Mfb+9h2niScu5cnGzf940DRCBoKdq6GX8Lw9xBycK1gaBgMrvh5zEfuLrVj4lpZO7y0IqsbvBYb1mNZlslhmlv0m7A9rnczLjjnfBLMiMcXU1nseoW/6JZuDxI01WOs66aKTxRzRXaUCy8IgMfQo50/+GKLVAQsrh5BdjbB4LFkkUvskG2JgX6imAEBWODQUZS1q4x8beqfRwuxU7w3YKUf1ykJkSGXpRPm0osMD5MbYEwCOqqrIzyL7FoycErjOBxXst4UJ9OxW7wQ0jEfrhlMsqc836V8ni0ELH6576B3HJMigtHrVd1pr9VCHtEi5zouo85TlFVrwzHsy6nNnUY+NZsrnbcvwWQl07KZCL7RlLnhdyaM+br7awqT288dGhP49vRYuu/myoV3ERnQZQpZIXg4I6QX1g+AcSGBYDZC+TyFfi9FxBl97usYLM5CseR/3vjFaVe0XTBNvOaovf3DZEK+MjoBGINJkcJeTGkOi8dDUpAK50U1/sX2VFmJBVgbdOoXBI2DGSgpbZ4vPU5UKwPWl0wceRTBs="
 
